@@ -1,6 +1,7 @@
 #include "../cds/locked_stack.h"
 
 #include <mutex>
+#include <memory>
 
 ////////////////////////////////////////////////////////////
 // Locked Stack implementation definitions
