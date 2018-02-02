@@ -41,7 +41,7 @@ public:
 ////////////////////////////////////////////////////////////
 class stack_base {
 public:
-    virtual ~stack_base() = 0 {}
+    virtual ~stack_base() { };
 
     virtual void push(int value) = 0;
     virtual bool pop(int& out) = 0;

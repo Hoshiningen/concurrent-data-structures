@@ -14,8 +14,8 @@ public:
     locked_stack& operator=(const locked_stack& other) = delete;
 
     // inherited from stack::stack_base
-    void push(int value) override;
-    bool pop(int& out) override;
+    virtual void push(int value) override;
+    virtual bool pop(int& out) override;
 
 private:
     struct impl;
