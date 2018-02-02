@@ -1,4 +1,0 @@
-set(CDS_SOURCE_FILES
-)
-
-add_library(cds STATIC ${CDS_SOURCE_FILES})
