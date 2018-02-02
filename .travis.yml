@@ -1,0 +1,21 @@
+dist: trusty
+sudo: required
+
+language: cpp
+
+compiler:
+  - clang
+
+branches:
+  only:
+    - master
+
+install:
+  - bash build_support/install_gbench.sh
+
+before_script:
+  - mkdir build && cd build
+  - cmake -DBENCHMARK_DIR=ThirdParty/benchmark ..
+
+script:
+  - make
