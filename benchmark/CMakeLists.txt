@@ -1,7 +1,5 @@
 
 set(BM_SOURCE_FILES
-    bm_stack.h
-    bm_main.cpp
 )
 
 add_executable(cd_benchmarks ${BM_SOURCE_FILES})
