@@ -1,9 +1,5 @@
-add_subdirectory(cds)
+add_subdirectory(cds/stack)
+add_subdirectory(utility)
 
-add_executable(concurrent-data-structures main.cpp)
-
-if (WIN32)
-    target_link_libraries(concurrent-data-structures cds benchmark ShLwApi)
-else()
-    target_link_libraries(concurrent-data-structures cds benchmark)
-endif()
+add_executable(cds main.cpp)
+target_link_libraries(cds stack utility)

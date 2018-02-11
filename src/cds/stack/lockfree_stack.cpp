@@ -1,12 +1,13 @@
-#include "../cds/locked_stack.h"
+#include "../stack/lockfree_stack.h"
+#include "../../utility/memory.h"
 
-#include <mutex>
+#include <atomic>
 #include <memory>
 
 ////////////////////////////////////////////////////////////
 // Locked Stack implementation definitions
 ////////////////////////////////////////////////////////////
-struct stack::locked_stack::impl {
+struct stack::lockfree_stack::impl {
     impl();
     ~impl();
 
@@ -17,9 +18,7 @@ struct stack::locked_stack::impl {
     void push(int value);
     bool pop(int& out);
 
-    stack::node* m_pTop;
-
-    mutable std::mutex mTopMut;
+    std::atomic<stack::node_base*> m_pTop;
 };
 
 ////////////////////////////////////////////////////////////
@@ -27,8 +26,8 @@ struct stack::locked_stack::impl {
 // The default constructor for the impl struct
 //
 ////////////////////////////////////////////////////////////
-stack::locked_stack::impl::impl()
-    : m_pTop(nullptr) {}
+stack::lockfree_stack::impl::impl()
+    : m_pTop() {}
 
 ////////////////////////////////////////////////////////////
 //
@@ -36,9 +35,10 @@ stack::locked_stack::impl::impl()
 // cleanup
 //
 ////////////////////////////////////////////////////////////
-stack::locked_stack::impl::~impl() {
+stack::lockfree_stack::impl::~impl() {
+
     // Need to investigate the safety of this..
-    auto pIter = m_pTop;
+    auto pIter = m_pTop.load();
     while (pIter != nullptr) {
         // Retain a reference to the current top
         auto top = pIter;
@@ -58,17 +58,20 @@ stack::locked_stack::impl::~impl() {
 // \param value   - The value to push onto the stack
 //
 ////////////////////////////////////////////////////////////
-void stack::locked_stack::impl::push(int value) {
-    std::lock_guard<std::mutex> lock{ mTopMut };
+void stack::lockfree_stack::impl::push(int value) {
 
-    auto node = new stack::node{ value };
+    stack::node_base* node = new stack::access_cnt_node(value);
+    stack::node_base* top = nullptr;
 
-    if (m_pTop == nullptr) {
-        m_pTop = node;
-    } else {
-        node->set_next(m_pTop);
-        m_pTop = node;
-    }
+    do
+    {
+        // Repeatedly try to set the new node as the new top
+        // as long as the retrieved value and the current top
+        // aren't equal.
+        top = m_pTop;
+        node->set_next(top);
+    } 
+    while (!std::atomic_compare_exchange_weak(&m_pTop, &top, node));
 }
 
 ////////////////////////////////////////////////////////////
@@ -82,20 +85,25 @@ void stack::locked_stack::impl::push(int value) {
 //
 // \return      - The success of the pop operation
 ////////////////////////////////////////////////////////////
-bool stack::locked_stack::impl::pop(int& out) {
-    std::lock_guard<std::mutex> lock{ mTopMut };
+bool stack::lockfree_stack::impl::pop(int& out) {
 
-    if (m_pTop == nullptr)
-        return false;
+    stack::node_base* top = nullptr;
 
-    // Retain a temp ref to the old top
-    auto top = m_pTop;
+    do
+    {
+        // Repeatedly try to obtain the top node until they're equal,
+        // upon which replace the top node with the next one in the list
+        top = m_pTop;
+
+        if (top == nullptr)
+            return false;
+    } 
+    while (!std::atomic_compare_exchange_weak(&m_pTop, &top, top->get_next()));
+
+    // Obtain the old top's value
     out = top->get_value();
 
-    // set the new top
-    m_pTop = m_pTop->get_next();
-
-    // delete the old top
+    // Delete the old top
     top->set_next(nullptr);
     delete top;
     top = nullptr;
@@ -110,18 +118,18 @@ bool stack::locked_stack::impl::pop(int& out) {
 
 ////////////////////////////////////////////////////////////
 //
-// The default constructor for the locked_stack class
+// The default constructor for the lockfree_stack class
 //
 ////////////////////////////////////////////////////////////
-stack::locked_stack::locked_stack()
-    : stack_base(), m_pImpl(std::make_unique<impl>()) {}
+stack::lockfree_stack::lockfree_stack()
+    : stack_base(), m_pImpl(utility::make_unique<impl>()) {}
 
 ////////////////////////////////////////////////////////////
 //
-// Destructs the locked_stack, freeing all allocated memory
+// Destructs the lockfree_stack, freeing all allocated memory
 //
 ////////////////////////////////////////////////////////////
-stack::locked_stack::~locked_stack() {
+stack::lockfree_stack::~lockfree_stack() {
     // This automatically calls the dstor of impl
 }
 
@@ -132,7 +140,7 @@ stack::locked_stack::~locked_stack() {
 // \param value   - The value to push onto the stack
 //
 ////////////////////////////////////////////////////////////
-void stack::locked_stack::push(int value) {
+void stack::lockfree_stack::push(int value) {
     m_pImpl->push(value);
 }
 
@@ -147,6 +155,6 @@ void stack::locked_stack::push(int value) {
 //
 // \return      - The success of the pop operation
 ////////////////////////////////////////////////////////////
-bool stack::locked_stack::pop(int& out) {
+bool stack::lockfree_stack::pop(int& out) {
     return m_pImpl->pop(out);
 }

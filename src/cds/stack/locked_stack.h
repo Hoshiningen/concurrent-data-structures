@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../cds/stack.h"
+#include "../stack/stack.h"
 
 namespace stack {
 
