@@ -13,6 +13,7 @@ if(WIN32)
     link_directories("${BENCHMARK_DIR}/build/x86-Release/src")
 else()
     set(CMAKE_REQUIRED_INCLUDES /usr/local/include)
+    include_directories(/usr/local/include)
     link_directories(/usr/local/lib)
 endif()
 
