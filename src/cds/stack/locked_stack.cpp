@@ -1,4 +1,5 @@
 #include "../stack/locked_stack.h"
+#include "../stack/node.h"
 #include "../../utility/memory.h"
 
 #include <mutex>
