@@ -6,9 +6,16 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 
-find_package(benchmark REQUIRED)
+if(WIN32)
+else()
+    find_package(benchmark REQUIRED)
+endif(WIN32)
 
-if(benchmasdfark_FOUND)
+set(SDF "asdf")
+
+message(STATUS "Benchmark include directory: ${SDF}")
+
+if(benchmark_FOUND)
     message(STATUS "Benchmark include directory: ${BENCHMARK_INCLUDE_DIRS}")
     message(STATUS "Benchmark library directory: ${BENCHMARK_LIBRARIES}")
     include_directories(${BENCHMARK_INCLUDE_DIRS})
