@@ -8,6 +8,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 
 find_package(benchmark)
 
+if(benchmark_FOUND)
+    message(STATUS "Benchmark include directory: ${benchmark_INCLUDE_DIR}")
+    message(STATUS "Benchmark library directory: ${benchmark_LIBRARY_DIR}")
+endif()
+
 set(BENCHMARK_INC_DIR CACHE STRING "Include directory for google benchmark")
 set(BENCHMARK_LIB_DIR CACHE STRING "Library directory for google benchmark") 
 include_directories(${BENCHMARK_INC_DIR})
