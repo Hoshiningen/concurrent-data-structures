@@ -6,11 +6,11 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 
-find_package(benchmark)
+find_package(benchmark REQUIRED)
 
 if(benchmark_FOUND)
-    message(STATUS "Benchmark include directory: ${benchmark_INCLUDE_DIRS}")
-    message(STATUS "Benchmark library directory: ${benchmark_LIBRARIES}")
+    message(STATUS "Benchmark include directory: ${BENCHMARK_INCLUDE_DIRS}")
+    message(STATUS "Benchmark library directory: ${BENCHMARK_LIBRARIES}")
     include_directories(${benchmark_INCLUDE_DIRS})
     link_directories(${benchmark_LIBRARIES})
 else()
@@ -18,7 +18,7 @@ else()
     set(BENCHMARK_LIB_DIR CACHE STRING "Library directory for google benchmark") 
     include_directories(${BENCHMARK_INC_DIR})
     link_directories(${BENCHMARK_LIB_DIR})
-endif()
+endif(benchmark_FOUND)
 
 # Add subdirectories
 add_subdirectory(src)
