@@ -15,7 +15,7 @@ install:
 
 before_script:
   - mkdir build && cd build
-  - cmake -DBENCHMARK_INC_DIR=/usr/local/include -DBENCHMARK_LIB_DIR=/usr/local/lib ..
+  - cmake ..
 
 script:
   - make
