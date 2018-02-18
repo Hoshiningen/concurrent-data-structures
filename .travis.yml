@@ -15,7 +15,7 @@ install:
 
 before_script:
   - mkdir build && cd build
-  - cmake -DBENCHMARK_DIR=ThirdParty/benchmark ..
+  - cmake ..
 
 script:
   - make
