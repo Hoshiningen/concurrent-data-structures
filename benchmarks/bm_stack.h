@@ -1,6 +1,6 @@
 #pragma once
 
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 
 class StackFixture : public benchmark::Fixture {};
 

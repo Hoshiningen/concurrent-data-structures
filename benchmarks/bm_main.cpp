@@ -1,5 +1,5 @@
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 
 #include "../benchmarks/bm_stack.h"
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();
