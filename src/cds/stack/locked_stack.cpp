@@ -121,10 +121,11 @@ stack::locked_stack::~locked_stack() {
 //
 // \param other   - Another stack to move into this one
 //==========================================================
-stack::locked_stack& stack::locked_stack::operator=(locked_stack&& other)
-{
+stack::locked_stack& stack::locked_stack::operator=(locked_stack&& other) {
     if (this != &other)
         m_pImpl = std::move(other.m_pImpl);
+
+    return *this;
 }
 
 //==========================================================
