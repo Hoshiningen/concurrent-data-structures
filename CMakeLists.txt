@@ -25,4 +25,4 @@ endif(benchmark_FOUND)
 
 # Add subdirectories
 add_subdirectory(src)
-add_subdirectory(benchmark)
+add_subdirectory(benchmarks)
