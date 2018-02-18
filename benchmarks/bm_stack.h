@@ -1,4 +1,6 @@
-#include "benchmark\benchmark.h"
+#pragma once
+
+#include <benchmark/benchmark.h>
 
 class StackFixture : public benchmark::Fixture {};
 

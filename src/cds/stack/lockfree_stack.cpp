@@ -127,6 +127,8 @@ stack::lockfree_stack::~lockfree_stack() {
 stack::lockfree_stack& stack::lockfree_stack::operator=(lockfree_stack&& other) {
     if (this != &other)
         m_pImpl = std::move(other.m_pImpl);
+
+    return *this;
 }
 
 //==========================================================
