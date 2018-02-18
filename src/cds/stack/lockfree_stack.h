@@ -9,25 +9,25 @@ namespace stack {
 // a lock-free stack algorithm that utilizes compare and swap
 // to atomically swap the top node during pushes and pops
 //==========================================================
-class lockfree_stack : public stack::stack_base {
+class LockFreeStack : public stack::StackBase {
 public:
-    lockfree_stack();
-    ~lockfree_stack();
+    LockFreeStack();
+    ~LockFreeStack();
 
     // Move operations
-    lockfree_stack(lockfree_stack&& other);
-    lockfree_stack& operator=(lockfree_stack&& other);
+    LockFreeStack(LockFreeStack&& other);
+    LockFreeStack& operator=(LockFreeStack&& other);
 
     // Prevent copying
-    lockfree_stack(const lockfree_stack& other) = delete;
-    lockfree_stack& operator=(const lockfree_stack& other) = delete;
+    LockFreeStack(const LockFreeStack& other) = delete;
+    LockFreeStack& operator=(const LockFreeStack& other) = delete;
 
     // inherited from stack::stack_base
     virtual void push(int value) override;
     virtual bool pop(int& out) override;
 
 private:
-    struct impl;
-    std::unique_ptr<impl> m_pImpl;
+    struct Impl;
+    std::unique_ptr<Impl> m_pImpl;
 };
 }  // namespace stack

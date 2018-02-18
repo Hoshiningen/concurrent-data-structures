@@ -8,31 +8,31 @@
 //==========================================================
 // Locked Stack implementation definitions
 //==========================================================
-struct stack::lockfree_stack::impl {
-    impl();
-    ~impl();
+struct stack::LockFreeStack::Impl {
+    Impl();
+    ~Impl();
 
     // Prevent copying
-    impl(const impl& other) = delete;
-    impl& operator=(const impl& other) = delete;
+    Impl(const Impl& other) = delete;
+    Impl& operator=(const Impl& other) = delete;
 
     void push(int value);
     bool pop(int& out);
 
-    std::atomic<stack::node_base*> m_pTop;
+    std::atomic<stack::NodeBase*> m_pTop;
 };
 
 //==========================================================
 // The default constructor for the impl struct
 //==========================================================
-stack::lockfree_stack::impl::impl()
+stack::LockFreeStack::Impl::Impl()
     : m_pTop() {}
 
 //==========================================================
 // The destructor for the impl class. Handles all memory
 // cleanup
 //==========================================================
-stack::lockfree_stack::impl::~impl() {
+stack::LockFreeStack::Impl::~Impl() {
     // Need to investigate the safety of this..
     auto pIter = m_pTop.load();
     while (pIter != nullptr) {
@@ -52,9 +52,9 @@ stack::lockfree_stack::impl::~impl() {
 //
 // \param value   - The value to push onto the stack
 //==========================================================
-void stack::lockfree_stack::impl::push(int value) {
-    stack::node_base* node = new stack::access_cnt_node(value);
-    stack::node_base* top = nullptr;
+void stack::LockFreeStack::Impl::push(int value) {
+    stack::NodeBase* node = new stack::AccessCountNode(value);
+    stack::NodeBase* top = nullptr;
 
     do
     {
@@ -77,8 +77,8 @@ void stack::lockfree_stack::impl::push(int value) {
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool stack::lockfree_stack::impl::pop(int& out) {
-    stack::node_base* top = nullptr;
+bool stack::LockFreeStack::Impl::pop(int& out) {
+    stack::NodeBase* top = nullptr;
 
     do
     {
@@ -109,13 +109,13 @@ bool stack::lockfree_stack::impl::pop(int& out) {
 //==========================================================
 // The default constructor for the lockfree_stack class
 //==========================================================
-stack::lockfree_stack::lockfree_stack()
-    : stack_base(), m_pImpl(utility::make_unique<impl>()) {}
+stack::LockFreeStack::LockFreeStack()
+    : StackBase(), m_pImpl(utility::make_unique<Impl>()) {}
 
 //==========================================================
 // Destructs the lockfree_stack, freeing all allocated memory
 //==========================================================
-stack::lockfree_stack::~lockfree_stack() {
+stack::LockFreeStack::~LockFreeStack() {
     // This automatically calls the dstor of impl
 }
 
@@ -124,7 +124,7 @@ stack::lockfree_stack::~lockfree_stack() {
 //
 // \param other   - The value to move into this one
 //==========================================================
-stack::lockfree_stack& stack::lockfree_stack::operator=(lockfree_stack&& other) {
+stack::LockFreeStack& stack::LockFreeStack::operator=(LockFreeStack&& other) {
     if (this != &other)
         m_pImpl = std::move(other.m_pImpl);
 
@@ -136,7 +136,7 @@ stack::lockfree_stack& stack::lockfree_stack::operator=(lockfree_stack&& other) 
 //
 // \param other   - The value to move into this one
 //==========================================================
-stack::lockfree_stack::lockfree_stack(lockfree_stack && other)
+stack::LockFreeStack::LockFreeStack(LockFreeStack && other)
     : m_pImpl{ std::move(other.m_pImpl) }
 {}
 
@@ -145,7 +145,7 @@ stack::lockfree_stack::lockfree_stack(lockfree_stack && other)
 //
 // \param value   - The value to push onto the stack
 //==========================================================
-void stack::lockfree_stack::push(int value) {
+void stack::LockFreeStack::push(int value) {
     m_pImpl->push(value);
 }
 
@@ -159,6 +159,6 @@ void stack::lockfree_stack::push(int value) {
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool stack::lockfree_stack::pop(int& out) {
+bool stack::LockFreeStack::pop(int& out) {
     return m_pImpl->pop(out);
 }
