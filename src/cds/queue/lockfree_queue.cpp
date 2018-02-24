@@ -45,7 +45,7 @@ queue::LockFreeQueue::Impl::~Impl() {
     {
         // Retain a reference to the current top
         auto top = pIter;
-        pIter = static_cast<queue::AtomicNode*>(pIter->get_next());
+        pIter = dynamic_cast<queue::AtomicNode*>(pIter->get_next());
 
         // delete the previous top
         top->set_next(nullptr);

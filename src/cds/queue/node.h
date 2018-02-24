@@ -31,10 +31,7 @@ public:
     explicit AtomicNode(int value)
         : m_value(value), m_pNext(nullptr) {}
 
-    ~AtomicNode() {
-        delete m_pNext;
-        m_pNext = nullptr;
-    }
+    ~AtomicNode() {}
 
     virtual void set_value(int value) override { m_value = value; }
     virtual void set_next(NodeBase* next) override {
@@ -44,7 +41,7 @@ public:
     virtual int get_value() override { return m_value; }
     virtual NodeBase* get_next() override { return m_pNext; }
 
-    virtual bool CASNext(queue::AtomicNode* expected, queue::AtomicNode* desired) {
+    virtual bool CASNext(AtomicNode* expected, AtomicNode* desired) {
         return std::atomic_compare_exchange_strong(&m_pNext, &expected, desired);
     }
 

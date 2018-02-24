@@ -52,5 +52,8 @@ int main()
     t4.join();
     t6.join();
 
+    delete stack;
+    delete queue;
+
     std::cin.get();
 }
