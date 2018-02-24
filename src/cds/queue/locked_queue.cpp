@@ -1,14 +1,14 @@
-#include "../stack/locked_stack.h"
-#include "../stack/node.h"
+#include "../queue/locked_queue.h"
+#include "../queue/node.h"
 #include "../../utility/memory.h"
 
-#include <memory>
 #include <mutex>
+#include <memory>
 
 //==========================================================
 // Locked Stack implementation definitions
 //==========================================================
-struct stack::LockedStack::Impl {
+struct queue::LockedQueue::Impl {
     Impl();
     ~Impl();
 
@@ -16,27 +16,29 @@ struct stack::LockedStack::Impl {
     Impl(const Impl& other) = delete;
     Impl& operator=(const Impl& other) = delete;
 
-    void push(int value);
-    bool pop(int& out);
+    void enqueue(int value);
+    bool dequeue(int& out);
 
-    stack::NodeBase* m_pTop;
+    queue::NodeBase* m_pHead;
+    queue::NodeBase* m_pTail;
 
-    mutable std::mutex mTopMut;
+    mutable std::mutex m_HeadMut;
+    mutable std::mutex m_TailMut;
 };
 
 //==========================================================
 // The default constructor for the impl struct
 //==========================================================
-stack::LockedStack::Impl::Impl()
-    : m_pTop(nullptr) {}
+queue::LockedQueue::Impl::Impl() 
+    : m_pHead(nullptr), m_pTail(nullptr) {}
 
 //==========================================================
 // The destructor for the impl class. Handles all memory
 // cleanup
 //==========================================================
-stack::LockedStack::Impl::~Impl() {
-    // Need to investigate the safety of this..
-    auto pIter = m_pTop;
+queue::LockedQueue::Impl::~Impl() {
+    // Delete any remaining nodes that weren't dequeued
+    auto pIter = m_pHead;
     while (pIter != nullptr) {
         // Retain a reference to the current top
         auto top = pIter;
@@ -50,45 +52,51 @@ stack::LockedStack::Impl::~Impl() {
 }
 
 //==========================================================
-// This pushes the specified value onto the stack
+// This enqueues the specified value
 //
-// \param value   - The value to push onto the stack
+// \param value   - The value to enqueue
 //==========================================================
-void stack::LockedStack::Impl::push(int value) {
-    std::lock_guard<std::mutex> lock{ mTopMut };
+void queue::LockedQueue::Impl::enqueue(int value) {
+    std::lock_guard<std::mutex> lock{ m_TailMut };
 
-    auto node = new stack::Node{ value };
+    auto node = new queue::AtomicNode{ value };
 
-    if (m_pTop == nullptr) {
-        m_pTop = node;
+    if (m_pTail == nullptr) {
+        m_pHead = node;
+        m_pTail = node;
     } else {
-        node->set_next(m_pTop);
-        m_pTop = node;
+        m_pTail->set_next(node);
+
+        if (m_pHead == m_pTail)
+            m_pHead->set_next(node);
+        
+        m_pTail = node;
     }
 }
 
 //==========================================================
-// This attempts to pop the stack, which puts the top value
-// into \param{out}, and returns true if the operation was
-// successful. If the stack is empty, then it returns false.
+// This attempts to perform a dequeue operation, which puts
+// the top value into \param{out}, and returns true if the
+// operation was successful. If the stack is empty, then it
+// returns false.
 //
 // \param out   - An output variable that is assigned the
 //                value that was at the top of the stack
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool stack::LockedStack::Impl::pop(int& out) {
-    std::lock_guard<std::mutex> lock{ mTopMut };
+bool queue::LockedQueue::Impl::dequeue(int& out) {
+    std::lock_guard<std::mutex> lock{ m_HeadMut };
 
-    if (m_pTop == nullptr)
+    if (m_pHead == nullptr)
         return false;
 
     // Retain a temp ref to the old top
-    auto top = m_pTop;
+    auto top = m_pHead;
     out = top->get_value();
 
     // set the new top
-    m_pTop = m_pTop->get_next();
+    m_pHead = m_pHead->get_next();
 
     // delete the old top
     top->set_next(nullptr);
@@ -99,29 +107,37 @@ bool stack::LockedStack::Impl::pop(int& out) {
 }
 
 //==========================================================
-// Locked Stack class definitions
+// Locked Queue class definitions
 //==========================================================
 
+//==========================================================
+// The default constructor for the locked_queue class
+//==========================================================
+queue::LockedQueue::LockedQueue()
+    : QueueBase(), m_pImpl(utility::make_unique<Impl>()) {}
 
 //==========================================================
-// The default constructor for the locked_stack class
+// Destructs the locked_queue, freeing all allocated memory
 //==========================================================
-stack::LockedStack::LockedStack()
-    : StackBase(), m_pImpl(utility::make_unique<Impl>()) {}
-
-//==========================================================
-// Destructs the locked_stack, freeing all allocated memory
-//==========================================================
-stack::LockedStack::~LockedStack() {
+queue::LockedQueue::~LockedQueue() {
     // This automatically calls the dstor of impl
 }
 
 //==========================================================
-// This defines the move assignment operator
+// Defines the move constructor
 //
-// \param other   - Another stack to move into this one
+// \param other     The other queue to move into this one
 //==========================================================
-stack::LockedStack& stack::LockedStack::operator=(LockedStack&& other) {
+queue::LockedQueue::LockedQueue(LockedQueue && other) {
+    m_pImpl = std::move(other.m_pImpl);
+}
+
+//==========================================================
+// Defines the move assignment operator
+//
+// \param other     The other queue to move into this one
+//==========================================================
+queue::LockedQueue& queue::LockedQueue::operator=(LockedQueue && other) {
     if (this != &other)
         m_pImpl = std::move(other.m_pImpl);
 
@@ -129,33 +145,25 @@ stack::LockedStack& stack::LockedStack::operator=(LockedStack&& other) {
 }
 
 //==========================================================
-// This defines the move constructor
+// This enqueues the specified value
 //
-// \param other   - Another stack to move into this one
+// \param value   - The value to enqueue
 //==========================================================
-stack::LockedStack::LockedStack(LockedStack&& other)
-    : m_pImpl{std::move(other.m_pImpl)}
-{}
-
-//==========================================================
-// This pushes the specified value onto the stack
-//
-// \param value   - The value to push onto the stack
-//==========================================================
-void stack::LockedStack::push(int value) {
-    m_pImpl->push(value);
+void queue::LockedQueue::enqueue(int value) {
+    m_pImpl->enqueue(value);
 }
 
 //==========================================================
-// This attempts to pop the stack, which puts the top value
-// into \param{out}, and returns true if the operation was
-// successful. If the stack is empty, then it returns false.
+// This attempts to perform a dequeue operation, which puts
+// the top value into \param{out}, and returns true if the
+// operation was successful. If the stack is empty, then it
+// returns false.
 //
 // \param out   - An output variable that is assigned the
 //                value that was at the top of the stack
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool stack::LockedStack::pop(int& out) {
-    return m_pImpl->pop(out);
+bool queue::LockedQueue::dequeue(int& out) {
+    return m_pImpl->dequeue(out);
 }

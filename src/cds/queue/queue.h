@@ -1,18 +1,16 @@
 #pragma once
 
-#include <memory>
-
-namespace stack {
+namespace queue {
 
 //==========================================================
 // Represents an abstract base class for all stack
 // implementations
 //==========================================================
-class StackBase {
+class QueueBase {
 public:
-    virtual ~StackBase() { };
+    virtual ~QueueBase() { };
 
-    virtual void push(int value) = 0;
-    virtual bool pop(int& out) = 0;
+    virtual void enqueue(int value) = 0;
+    virtual bool dequeue(int& out) = 0;
 };
 }  // namespace stack
