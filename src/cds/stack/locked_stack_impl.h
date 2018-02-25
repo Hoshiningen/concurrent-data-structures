@@ -1,5 +1,7 @@
+#pragma once
+
 #include "../stack/locked_stack.h"
-#include "../stack/node.h"
+#include "../../utility/node.h"
 #include "../../utility/memory.h"
 
 #include <memory>
@@ -8,33 +10,29 @@
 //==========================================================
 // Locked Stack implementation definitions
 //==========================================================
-struct stack::LockedStack::Impl {
-    Impl();
+template<typename T>
+struct stack::LockedStack<T>::Impl {
+    Impl() = default;
     ~Impl();
 
     // Prevent copying
     Impl(const Impl& other) = delete;
     Impl& operator=(const Impl& other) = delete;
 
-    void push(int value);
-    bool pop(int& out);
+    void push(T value);
+    bool pop(T& out);
 
-    stack::NodeBase* m_pTop;
+    utility::NodeBase<T>* m_pTop;
 
     mutable std::mutex mTopMut;
 };
 
 //==========================================================
-// The default constructor for the impl struct
-//==========================================================
-stack::LockedStack::Impl::Impl()
-    : m_pTop(nullptr) {}
-
-//==========================================================
 // The destructor for the impl class. Handles all memory
 // cleanup
 //==========================================================
-stack::LockedStack::Impl::~Impl() {
+template<typename T>
+stack::LockedStack<T>::Impl::~Impl() {
     // Need to investigate the safety of this..
     auto pIter = m_pTop;
     while (pIter != nullptr) {
@@ -54,10 +52,11 @@ stack::LockedStack::Impl::~Impl() {
 //
 // \param value   - The value to push onto the stack
 //==========================================================
-void stack::LockedStack::Impl::push(int value) {
+template<typename T>
+void stack::LockedStack<T>::Impl::push(T value) {
     std::lock_guard<std::mutex> lock{ mTopMut };
 
-    auto node = new stack::Node{ value };
+    auto node = new utility::Node<T>{ value };
 
     if (m_pTop == nullptr) {
         m_pTop = node;
@@ -77,7 +76,8 @@ void stack::LockedStack::Impl::push(int value) {
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool stack::LockedStack::Impl::pop(int& out) {
+template<typename T>
+bool stack::LockedStack<T>::Impl::pop(T& out) {
     std::lock_guard<std::mutex> lock{ mTopMut };
 
     if (m_pTop == nullptr)
@@ -106,13 +106,15 @@ bool stack::LockedStack::Impl::pop(int& out) {
 //==========================================================
 // The default constructor for the locked_stack class
 //==========================================================
-stack::LockedStack::LockedStack()
+template<typename T>
+stack::LockedStack<T>::LockedStack()
     : StackBase(), m_pImpl(utility::make_unique<Impl>()) {}
 
 //==========================================================
 // Destructs the locked_stack, freeing all allocated memory
 //==========================================================
-stack::LockedStack::~LockedStack() {
+template<typename T>
+stack::LockedStack<T>::~LockedStack() {
     // This automatically calls the dstor of impl
 }
 
@@ -121,7 +123,8 @@ stack::LockedStack::~LockedStack() {
 //
 // \param other   - Another stack to move into this one
 //==========================================================
-stack::LockedStack& stack::LockedStack::operator=(LockedStack&& other) {
+template<typename T>
+stack::LockedStack<T>& stack::LockedStack<T>::operator=(LockedStack&& other) {
     if (this != &other)
         m_pImpl = std::move(other.m_pImpl);
 
@@ -133,7 +136,8 @@ stack::LockedStack& stack::LockedStack::operator=(LockedStack&& other) {
 //
 // \param other   - Another stack to move into this one
 //==========================================================
-stack::LockedStack::LockedStack(LockedStack&& other)
+template<typename T>
+stack::LockedStack<T>::LockedStack(LockedStack&& other)
     : m_pImpl{std::move(other.m_pImpl)}
 {}
 
@@ -142,7 +146,8 @@ stack::LockedStack::LockedStack(LockedStack&& other)
 //
 // \param value   - The value to push onto the stack
 //==========================================================
-void stack::LockedStack::push(int value) {
+template<typename T>
+void stack::LockedStack<T>::push(T value) {
     m_pImpl->push(value);
 }
 
@@ -156,6 +161,7 @@ void stack::LockedStack::push(int value) {
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool stack::LockedStack::pop(int& out) {
+template<typename T>
+bool stack::LockedStack<T>::pop(T& out) {
     return m_pImpl->pop(out);
 }

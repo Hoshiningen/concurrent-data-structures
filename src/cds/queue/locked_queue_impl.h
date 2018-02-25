@@ -1,5 +1,7 @@
+#pragma once
+
 #include "../queue/locked_queue.h"
-#include "../queue/node.h"
+#include "../../utility/node.h"
 #include "../../utility/memory.h"
 
 #include <mutex>
@@ -8,35 +10,31 @@
 //==========================================================
 // Locked Stack implementation definitions
 //==========================================================
-struct queue::LockedQueue::Impl {
-    Impl();
+template<typename T>
+struct queue::LockedQueue<T>::Impl {
+    Impl() = default;
     ~Impl();
 
     // Prevent copying
     Impl(const Impl& other) = delete;
     Impl& operator=(const Impl& other) = delete;
 
-    void enqueue(int value);
-    bool dequeue(int& out);
+    void enqueue(T value);
+    bool dequeue(T& out);
 
-    queue::NodeBase* m_pHead;
-    queue::NodeBase* m_pTail;
+    utility::NodeBase<T>* m_pHead;
+    utility::NodeBase<T>* m_pTail;
 
     mutable std::mutex m_HeadMut;
     mutable std::mutex m_TailMut;
 };
 
 //==========================================================
-// The default constructor for the impl struct
-//==========================================================
-queue::LockedQueue::Impl::Impl() 
-    : m_pHead(nullptr), m_pTail(nullptr) {}
-
-//==========================================================
 // The destructor for the impl class. Handles all memory
 // cleanup
 //==========================================================
-queue::LockedQueue::Impl::~Impl() {
+template<typename T>
+queue::LockedQueue<T>::Impl::~Impl() {
     // Delete any remaining nodes that weren't dequeued
     auto pIter = m_pHead;
     while (pIter != nullptr) {
@@ -56,10 +54,11 @@ queue::LockedQueue::Impl::~Impl() {
 //
 // \param value   - The value to enqueue
 //==========================================================
-void queue::LockedQueue::Impl::enqueue(int value) {
+template<typename T>
+void queue::LockedQueue<T>::Impl::enqueue(T value) {
     std::lock_guard<std::mutex> lock{ m_TailMut };
 
-    auto node = new queue::AtomicNode{ value };
+    auto node = new utility::Node<T>{ value };
 
     if (m_pTail == nullptr) {
         m_pHead = node;
@@ -85,7 +84,8 @@ void queue::LockedQueue::Impl::enqueue(int value) {
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool queue::LockedQueue::Impl::dequeue(int& out) {
+template<typename T>
+bool queue::LockedQueue<T>::Impl::dequeue(T& out) {
     std::lock_guard<std::mutex> lock{ m_HeadMut };
 
     if (m_pHead == nullptr)
@@ -113,13 +113,15 @@ bool queue::LockedQueue::Impl::dequeue(int& out) {
 //==========================================================
 // The default constructor for the locked_queue class
 //==========================================================
-queue::LockedQueue::LockedQueue()
+template<typename T>
+queue::LockedQueue<T>::LockedQueue()
     : QueueBase(), m_pImpl(utility::make_unique<Impl>()) {}
 
 //==========================================================
 // Destructs the locked_queue, freeing all allocated memory
 //==========================================================
-queue::LockedQueue::~LockedQueue() {
+template<typename T>
+queue::LockedQueue<T>::~LockedQueue() {
     // This automatically calls the dstor of impl
 }
 
@@ -128,7 +130,8 @@ queue::LockedQueue::~LockedQueue() {
 //
 // \param other     The other queue to move into this one
 //==========================================================
-queue::LockedQueue::LockedQueue(LockedQueue && other) {
+template<typename T>
+queue::LockedQueue<T>::LockedQueue(LockedQueue && other) {
     m_pImpl = std::move(other.m_pImpl);
 }
 
@@ -137,7 +140,8 @@ queue::LockedQueue::LockedQueue(LockedQueue && other) {
 //
 // \param other     The other queue to move into this one
 //==========================================================
-queue::LockedQueue& queue::LockedQueue::operator=(LockedQueue && other) {
+template<typename T>
+queue::LockedQueue<T>& queue::LockedQueue<T>::operator=(LockedQueue<T> && other) {
     if (this != &other)
         m_pImpl = std::move(other.m_pImpl);
 
@@ -149,7 +153,8 @@ queue::LockedQueue& queue::LockedQueue::operator=(LockedQueue && other) {
 //
 // \param value   - The value to enqueue
 //==========================================================
-void queue::LockedQueue::enqueue(int value) {
+template<typename T>
+void queue::LockedQueue<T>::enqueue(T value) {
     m_pImpl->enqueue(value);
 }
 
@@ -164,6 +169,7 @@ void queue::LockedQueue::enqueue(int value) {
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool queue::LockedQueue::dequeue(int& out) {
+template<typename T>
+bool queue::LockedQueue<T>::dequeue(T& out) {
     return m_pImpl->dequeue(out);
 }

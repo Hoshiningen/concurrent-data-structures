@@ -9,7 +9,8 @@ namespace stack {
 // based stack that controls access to the top node using a
 // scoped lock
 //==========================================================
-class LockedStack : public stack::StackBase {
+template<typename T>
+class LockedStack : public stack::StackBase<T> {
 public:
     LockedStack();
     ~LockedStack();
@@ -23,11 +24,13 @@ public:
     LockedStack& operator=(const LockedStack& other) = delete;
 
     // inherited from stack::stack_base
-    virtual void push(int value) override;
-    virtual bool pop(int& out) override;
+    virtual void push(T value) override;
+    virtual bool pop(T& out) override;
 
 private:
     struct Impl;
     std::unique_ptr<Impl> m_pImpl;
 };
 }  // namespace stack
+
+#include "../stack/locked_stack_impl.h"

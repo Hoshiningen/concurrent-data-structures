@@ -1,6 +1,4 @@
-set(QUEUE_SRC
-    locked_queue.cpp
-    lockfree_queue.cpp
-)
+add_library(queue INTERFACE)
 
-add_library(queue STATIC ${QUEUE_SRC})
+target_include_directories(queue INTERFACE 
+    ${PROJECT_SOURCE_DIR}/src/cds/queue)

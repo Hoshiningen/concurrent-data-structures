@@ -1,15 +1,19 @@
+#pragma once
+
 #include "../queue/lockfree_queue.h"
-#include "../queue/node.h"
+#include "../queue/lockfree_node.h"
 #include "../../utility/memory.h"
 
 #include <mutex>
 #include <atomic>
 #include <memory>
+#include <cassert>
 
 //==========================================================
 // Locked Stack Implementation definitions
 //==========================================================
-struct queue::LockFreeQueue::Impl {
+template<typename T>
+struct queue::LockFreeQueue<T>::Impl {
     Impl();
     ~Impl();
 
@@ -17,40 +21,48 @@ struct queue::LockFreeQueue::Impl {
     Impl(const Impl& other) = delete;
     Impl& operator=(const Impl& other) = delete;
 
-    void enqueue(int value);
-    bool dequeue(int& out);
+    void enqueue(T value);
+    bool dequeue(T& out);
 
-    std::atomic<queue::AtomicNode*> m_pHead;
-    std::atomic<queue::AtomicNode*> m_pTail;
+    std::atomic<queue::lf::NodePtr<T>> m_pHead;
+    std::atomic<queue::lf::NodePtr<T>> m_pTail;
 };
 
 //==========================================================
 // The default constructor for the Impl struct
 //==========================================================
-queue::LockFreeQueue::Impl::Impl() {
+template<typename T>
+queue::LockFreeQueue<T>::Impl::Impl() {
+    assert((std::is_trivially_constructible<queue::lf::NodePtr<T>>::value));
+    assert((std::is_trivially_copy_constructible<queue::lf::NodePtr<T>>::value));
+    assert((std::is_trivially_move_constructible<queue::lf::NodePtr<T>>::value));
+    assert((std::is_trivially_copy_assignable<queue::lf::NodePtr<T>>::value));
+    assert((std::is_trivially_move_assignable<queue::lf::NodePtr<T>>::value));
+
     // Assign a dummy node to the head and tail pointers
-    auto node = new queue::AtomicNode{};
-    m_pHead = node;
-    m_pTail = node;
+    auto wrapper = queue::lf::NodePtr<T>{};
+    wrapper.ptr = new queue::lf::Node<T>{};
+
+    m_pHead = wrapper;
+    m_pTail = wrapper;
 }
 
 //==========================================================
 // The destructor for the Impl class. Handles all memory
 // cleanup
 //==========================================================
-queue::LockFreeQueue::Impl::~Impl() {
-    // Frees any leftover nodes that weren't dequeued off
-    auto pIter = m_pHead.load();
-    while (pIter != nullptr)
-    {
+template<typename T>
+queue::LockFreeQueue<T>::Impl::~Impl() {
+    auto pIter = m_pHead.load(std::memory_order_acquire);
+    while (pIter.ptr != nullptr) {
         // Retain a reference to the current top
         auto top = pIter;
-        pIter = dynamic_cast<queue::AtomicNode*>(pIter->get_next());
+        pIter = pIter.ptr->next;
 
         // delete the previous top
-        top->set_next(nullptr);
-        delete top;
-        top = nullptr;
+        top.ptr->next.store({ nullptr, 0 }, std::memory_order_release);
+        delete top.ptr;
+        top.ptr = nullptr;
     }
 }
 
@@ -59,38 +71,50 @@ queue::LockFreeQueue::Impl::~Impl() {
 //
 // \param value   - The value to enqueue
 //==========================================================
-void queue::LockFreeQueue::Impl::enqueue(int value) {
-    queue::AtomicNode* node = new queue::AtomicNode{ value };
-    queue::AtomicNode* tail = nullptr;
-    queue::AtomicNode* next = nullptr;
+template<typename T>
+void queue::LockFreeQueue<T>::Impl::enqueue(T value) {
+    queue::lf::Node<T>* node = new queue::lf::Node<T>{ value };
+    queue::lf::NodePtr<T> tail{};
+    queue::lf::NodePtr<T> next{};
+    queue::lf::NodePtr<T> wrapper{};
 
     while (true) {
         // Repeatedly obtain the value of the tail and the next value
         tail = m_pTail;
-        next = dynamic_cast<queue::AtomicNode*>(m_pTail.load()->get_next());
+        next = tail.ptr->next;
 
         // Ensure that the tail hasn't been changed 
-        if (tail == m_pTail) {
+        if (tail == m_pTail.load(std::memory_order_acquire)) {
 
             // If we aren't observing an intermediate enqueue result
-            if (next == nullptr) {
+            if (next.ptr == nullptr) {
+
+                wrapper.ptr = node;
+                wrapper.count = next.count + 1;
 
                 // Perform the CAS to set tail's next node with the new
                 // node we're enqueueing
-                if (tail->CASNext(next, node))
+                if (std::atomic_compare_exchange_strong(&tail.ptr->next, &next, wrapper))
                     break;
 
-            } else {
+            }
+            else {
+
+                wrapper.ptr = next.ptr;
+                wrapper.count = tail.count + 1;
 
                 // We're observing an intermediate result where the next pointer
                 // was set, and so let us complete the operation
-                std::atomic_compare_exchange_strong(&m_pTail, &tail, next);
+                std::atomic_compare_exchange_strong(&m_pTail, &tail, wrapper);
             }
         }
     }
 
+    wrapper.ptr = node;
+    wrapper.count = tail.count + 1;
+
     // Lastly, point the tail at the enqueued node
-    std::atomic_compare_exchange_strong(&m_pTail, &tail, node);
+    std::atomic_compare_exchange_strong(&m_pTail, &tail, wrapper);
 }
 
 //==========================================================
@@ -104,43 +128,53 @@ void queue::LockFreeQueue::Impl::enqueue(int value) {
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool queue::LockFreeQueue::Impl::dequeue(int& out) {
-    queue::AtomicNode* head = nullptr;
-    queue::AtomicNode* tail = nullptr;
-    queue::AtomicNode* next = nullptr;
+template<typename T>
+bool queue::LockFreeQueue<T>::Impl::dequeue(T& out) {
+    queue::lf::NodePtr<T> head{};
+    queue::lf::NodePtr<T> tail{};
+    queue::lf::NodePtr<T> next{};
+    queue::lf::NodePtr<T> wrapper{};
 
     while (true) {
         head = m_pHead;
         tail = m_pTail;
-        next = dynamic_cast<queue::AtomicNode*>(head->get_next());
+        next = head.ptr->next;
 
         // Make sure that we're not observing an intermediate state
-        if (head == m_pHead) {
+        if (head == m_pHead.load(std::memory_order_acquire)) {
 
             // Check to see if the tail is falling behind
-            if (head == tail) {
+            if (head.ptr == tail.ptr) {
 
                 // Is the queue empty?
-                if (next == nullptr)
+                if (next.ptr == nullptr)
                     return false;
 
+                wrapper.ptr = next.ptr;
+                wrapper.count = tail.count + 1;
+
                 // Advance tail since it's falling behind
-                std::atomic_compare_exchange_strong(&m_pTail, &tail, next);
-            } else {
+                std::atomic_compare_exchange_strong(&m_pTail, &tail, wrapper);
+            }
+            else {
 
                 // Obtain the value of the top of the queue and advance
                 // the top to the next node
-                out = next->get_value();
-                if (std::atomic_compare_exchange_strong(&m_pHead, &head, next))
+                out = next.ptr->value;
+
+                wrapper.ptr = next.ptr;
+                wrapper.count = head.count + 1;
+
+                if (std::atomic_compare_exchange_strong(&m_pHead, &head, wrapper))
                     break;
             }
         }
     }
 
-    // Free the previous top of the queue
-    head->set_next(nullptr);
-    delete head;
-    head = nullptr;
+    // delete the previous head
+    head.ptr->next.store({ nullptr, 0 }, std::memory_order_release);
+    delete head.ptr;
+    head.ptr = nullptr;
 
     return true;
 }
@@ -152,13 +186,15 @@ bool queue::LockFreeQueue::Impl::dequeue(int& out) {
 //==========================================================
 // The default constructor for the LockFreeQueue class
 //==========================================================
-queue::LockFreeQueue::LockFreeQueue()
+template<typename T>
+queue::LockFreeQueue<T>::LockFreeQueue()
     : QueueBase(), m_pImpl(utility::make_unique<Impl>()) {}
 
 //==========================================================
 // Destructs the LockFreeQueue, freeing all allocated memory
 //==========================================================
-queue::LockFreeQueue::~LockFreeQueue() {
+template<typename T>
+queue::LockFreeQueue<T>::~LockFreeQueue() {
     // This automatically calls the dstor of Impl
 }
 
@@ -167,7 +203,8 @@ queue::LockFreeQueue::~LockFreeQueue() {
 //
 // \param other     The other queue to move into this one
 //==========================================================
-queue::LockFreeQueue::LockFreeQueue(LockFreeQueue && other) {
+template<typename T>
+queue::LockFreeQueue<T>::LockFreeQueue(LockFreeQueue && other) {
     m_pImpl = std::move(other.m_pImpl);
 }
 
@@ -176,7 +213,8 @@ queue::LockFreeQueue::LockFreeQueue(LockFreeQueue && other) {
 //
 // \param other     The other queue to move into this one
 //==========================================================
-queue::LockFreeQueue& queue::LockFreeQueue::operator=(LockFreeQueue && other) {
+template<typename T>
+queue::LockFreeQueue<T>& queue::LockFreeQueue<T>::operator=(LockFreeQueue && other) {
     if (this != &other)
         m_pImpl = std::move(other.m_pImpl);
 
@@ -188,7 +226,8 @@ queue::LockFreeQueue& queue::LockFreeQueue::operator=(LockFreeQueue && other) {
 //
 // \param value   - The value to enqueue
 //==========================================================
-void queue::LockFreeQueue::enqueue(int value) {
+template<typename T>
+void queue::LockFreeQueue<T>::enqueue(T value) {
     m_pImpl->enqueue(value);
 }
 
@@ -203,6 +242,7 @@ void queue::LockFreeQueue::enqueue(int value) {
 //
 // \return      - The success of the pop operation
 //==========================================================
-bool queue::LockFreeQueue::dequeue(int& out) {
+template<typename T>
+bool queue::LockFreeQueue<T>::dequeue(T& out) {
     return m_pImpl->dequeue(out);
 }
