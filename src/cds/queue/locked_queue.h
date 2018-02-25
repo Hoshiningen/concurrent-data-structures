@@ -2,6 +2,8 @@
 
 #include "../queue/queue.h"
 
+#include "../../utility/memory.h"
+
 #include <memory>
 
 namespace queue {
@@ -30,7 +32,7 @@ public:
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> m_pImpl;
+    std::unique_ptr<Impl> m_pImpl = { nullptr };
 };
 }  // namespace queue
 

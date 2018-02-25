@@ -115,7 +115,7 @@ bool queue::LockedQueue<T>::Impl::dequeue(T& out) {
 //==========================================================
 template<typename T>
 queue::LockedQueue<T>::LockedQueue()
-    : QueueBase(), m_pImpl(utility::make_unique<Impl>()) {}
+    : m_pImpl(utility::make_unique<Impl>()) {}
 
 //==========================================================
 // Destructs the locked_queue, freeing all allocated memory
