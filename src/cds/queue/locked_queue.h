@@ -10,7 +10,8 @@ namespace queue {
 // Represents an implementation of the Michael and Scott
 // lock based queue
 //==========================================================
-class LockedQueue : public queue::QueueBase {
+template<typename T>
+class LockedQueue : public queue::QueueBase<T> {
 public:
     LockedQueue();
     ~LockedQueue();
@@ -24,11 +25,13 @@ public:
     LockedQueue& operator=(const LockedQueue& other) = delete;
 
     // inherited from stack::stack_base
-    virtual void enqueue(int value) override;
-    virtual bool dequeue(int& out) override;
+    virtual void enqueue(T value) override;
+    virtual bool dequeue(T& out) override;
 
 private:
     struct Impl;
     std::unique_ptr<Impl> m_pImpl;
 };
 }  // namespace queue
+
+#include "../queue/locked_queue_impl.h"

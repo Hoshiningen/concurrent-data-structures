@@ -1,6 +1,4 @@
-set(STACK_SRC
-    locked_stack.cpp
-    lockfree_stack.cpp
-)
+add_library(stack INTERFACE)
 
-add_library(stack STATIC ${STACK_SRC})
+target_include_directories(stack INTERFACE 
+    ${PROJECT_SOURCE_DIR}/src/cds/stack)
