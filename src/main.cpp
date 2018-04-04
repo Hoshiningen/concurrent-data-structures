@@ -5,6 +5,7 @@
 #include "cds/stack/lockfree_stack.h"
 #include "cds/queue/locked_queue.h"
 #include "cds/queue/lockfree_queue.h"
+#include "cds/hashtable//lockfree_hashtable.h"
 
 void produceS(stack::StackBase<float>* stack, const float& n)
 { 
@@ -32,8 +33,13 @@ void consumeQ(queue::QueueBase<float>* queue)
         std::cout << top_val << "\n";
 }
 
+const unsigned int kSize = 5;
+using iArr = int[kSize];
+
 int main()
 {
+    iArr a;
+
     auto stack = new stack::LockedStack<float>{};
 
     auto t1 = std::thread{ produceS, stack, 10 };
@@ -54,6 +60,11 @@ int main()
 
     delete stack;
     delete queue;
+
+    hashtable::LockFreeHashtable<int, int> lfHT{};
+    lfHT.insert({ 10, 8 });
+    auto found = lfHT.find({ 10, 8 });
+    lfHT.insert({ 10, 8 });
 
     std::cin.get();
 }

@@ -4,6 +4,8 @@
 #include "../stack/lockfree_node.h"
 #include "../../utility/memory.h"
 
+#include <intrin.h>
+
 #include <atomic>
 #include <memory>
 #include <cassert>
@@ -83,6 +85,7 @@ void stack::LockFreeStack<T>::Impl::push(T value) {
         wrapper.ptr = node;
         wrapper.count = top.count + 1;       
     } 
+    //while(!_InterlockedCompareExchange128(&m_pTop, &top, wrapper));
     while (!std::atomic_compare_exchange_weak(&m_pTop, &top, wrapper));
 }
 
