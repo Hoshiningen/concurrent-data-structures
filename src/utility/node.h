@@ -26,7 +26,7 @@ template<typename T>
 class Node : public NodeBase<T> {
 public:
     Node()
-        : m_value(default(T)), m_pNext(nullptr) {}
+        : m_value(T{}), m_pNext(nullptr) {}
 
     explicit Node(T value)
         : m_value(value), m_pNext(nullptr) {}

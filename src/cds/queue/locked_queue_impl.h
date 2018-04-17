@@ -4,6 +4,8 @@
 #include "../../utility/node.h"
 #include "../../utility/memory.h"
 
+#include "../../../application/command.h"
+
 #include <mutex>
 #include <memory>
 
@@ -12,7 +14,7 @@
 //==========================================================
 template<typename T>
 struct queue::LockedQueue<T>::Impl {
-    Impl() = default;
+    Impl();
     ~Impl();
 
     // Prevent copying
@@ -29,24 +31,31 @@ struct queue::LockedQueue<T>::Impl {
     mutable std::mutex m_TailMut;
 };
 
+template<typename T>
+queue::LockedQueue<T>::Impl::Impl()
+{
+    auto node = new utility::Node<T>{};
+    m_pHead = node;
+    m_pTail = node;
+}
 //==========================================================
 // The destructor for the impl class. Handles all memory
 // cleanup
 //==========================================================
 template<typename T>
 queue::LockedQueue<T>::Impl::~Impl() {
-    // Delete any remaining nodes that weren't dequeued
-    auto pIter = m_pHead;
-    while (pIter != nullptr) {
-        // Retain a reference to the current top
-        auto top = pIter;
-        pIter = pIter->get_next();
-
-        // delete the previous top
-        top->set_next(nullptr);
-        delete top;
-        top = nullptr;
-    }
+    //// Delete any remaining nodes that weren't dequeued
+    //auto pIter = m_pHead;
+    //while (pIter != nullptr) {
+    //    // Retain a reference to the current top
+    //    auto top = pIter;
+    //    pIter = pIter->get_next();
+    //
+    //    // delete the previous top
+    //    top->set_next(nullptr);
+    //    delete top;
+    //    top = nullptr;
+    //}
 }
 
 //==========================================================
@@ -60,17 +69,8 @@ void queue::LockedQueue<T>::Impl::enqueue(T value) {
 
     auto node = new utility::Node<T>{ value };
 
-    if (m_pTail == nullptr) {
-        m_pHead = node;
-        m_pTail = node;
-    } else {
-        m_pTail->set_next(node);
-
-        if (m_pHead == m_pTail)
-            m_pHead->set_next(node);
-        
-        m_pTail = node;
-    }
+    m_pTail->set_next(node);
+    m_pTail = node;
 }
 
 //==========================================================
@@ -88,20 +88,16 @@ template<typename T>
 bool queue::LockedQueue<T>::Impl::dequeue(T& out) {
     std::lock_guard<std::mutex> lock{ m_HeadMut };
 
-    if (m_pHead == nullptr)
+    auto node = m_pHead;
+    auto top = node->get_next();
+
+    if (!top)
         return false;
 
-    // Retain a temp ref to the old top
-    auto top = m_pHead;
     out = top->get_value();
 
     // set the new top
-    m_pHead = m_pHead->get_next();
-
-    // delete the old top
-    top->set_next(nullptr);
-    delete top;
-    top = nullptr;
+    m_pHead = top;
 
     return true;
 }
@@ -115,7 +111,7 @@ bool queue::LockedQueue<T>::Impl::dequeue(T& out) {
 //==========================================================
 template<typename T>
 queue::LockedQueue<T>::LockedQueue()
-    : QueueBase(), m_pImpl(utility::make_unique<Impl>()) {}
+    : m_pImpl(utility::make_unique<Impl>()) {}
 
 //==========================================================
 // Destructs the locked_queue, freeing all allocated memory

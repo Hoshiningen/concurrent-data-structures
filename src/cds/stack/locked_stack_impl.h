@@ -108,7 +108,7 @@ bool stack::LockedStack<T>::Impl::pop(T& out) {
 //==========================================================
 template<typename T>
 stack::LockedStack<T>::LockedStack()
-    : StackBase(), m_pImpl(utility::make_unique<Impl>()) {}
+    : m_pImpl(utility::make_unique<Impl>()) {}
 
 //==========================================================
 // Destructs the locked_stack, freeing all allocated memory

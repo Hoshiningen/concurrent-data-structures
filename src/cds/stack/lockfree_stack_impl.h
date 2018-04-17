@@ -31,14 +31,7 @@ struct stack::LockFreeStack<T>::Impl {
 //==========================================================
 template<typename T>
 stack::LockFreeStack<T>::Impl::Impl()
-    : m_pTop{}
-{
-    assert((std::is_trivially_constructible<stack::lf::NodePtr<T>>::value));
-    assert((std::is_trivially_copy_constructible<stack::lf::NodePtr<T>>::value));
-    assert((std::is_trivially_move_constructible<stack::lf::NodePtr<T>>::value));
-    assert((std::is_trivially_copy_assignable<stack::lf::NodePtr<T>>::value));
-    assert((std::is_trivially_move_assignable<stack::lf::NodePtr<T>>::value));
-}
+    : m_pTop{} {}
 
 //==========================================================
 // The destructor for the impl class. Handles all memory
@@ -77,13 +70,12 @@ void stack::LockFreeStack<T>::Impl::push(T value) {
         // Repeatedly try to set the new node as the new top
         // as long as the retrieved value and the current top
         // aren't equal.
-        top = m_pTop.load(std::memory_order_acquire);
+        top = m_pTop;
         node->next.ptr = top.ptr;
         
-        wrapper.ptr = node;
-        wrapper.count = top.count + 1;       
+        wrapper = stack::lf::NodePtr<T>{ node, top.count + 1 };
     } 
-    while (!std::atomic_compare_exchange_weak(&m_pTop, &top, wrapper));
+    while (!m_pTop.compare_exchange_weak(top, wrapper));
 }
 
 //==========================================================
@@ -99,23 +91,22 @@ void stack::LockFreeStack<T>::Impl::push(T value) {
 template<typename T>
 bool stack::LockFreeStack<T>::Impl::pop(T& out) {
     stack::lf::NodePtr<T> top{};
-    stack::lf::NodePtr<T> wrapper{};
 
     do
     {
         // Repeatedly try to obtain the top node until they're equal,
         // upon which replace the top node with the next one in the list
-        top = m_pTop.load(std::memory_order_acquire);
+        top = m_pTop;
 
         if (top.ptr == nullptr)
             return false;
 
-        wrapper.ptr = top.ptr->next.ptr;
-        wrapper.count = top.count + 1;
+        auto wrapper = stack::lf::NodePtr<T>{
+            top.ptr->next.ptr, top.count + 1 };
     }
-    while (!std::atomic_compare_exchange_weak(&m_pTop, &top, wrapper));
+    while (!m_pTop.compare_exchange_weak(top, wrapper));
 
-    // Obtain the old top's value
+    // Obtain the old top's value and pass it out
     out = top.ptr->value;
 
     // Delete the old top

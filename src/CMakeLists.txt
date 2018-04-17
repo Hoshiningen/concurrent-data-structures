@@ -1,6 +1,5 @@
-add_subdirectory(cds/stack)
-add_subdirectory(cds/queue)
-add_subdirectory(utility)
+include_directories(cds/stack)
+include_directories(cds/queue)
+include_directories(utility)
 
 add_executable(cds-exe main.cpp)
-target_link_libraries(cds-exe stack queue utility)
