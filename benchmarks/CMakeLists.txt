@@ -1,7 +1,5 @@
 set(BM_SRC
     bm_main.cpp
-    bm_queue.h
-    bm_stack.h
 )
 
 if(WIN32)
@@ -10,15 +8,19 @@ if(WIN32)
     
     list(APPEND LINK_LIBS ShLwApi)
 else()
-    set(BENCHMARK_INC_DIR "/usr/local/include")
-    set(BENCHMARK_LIB_DIR "/usr/local/lib")
+    set(BENCHMARK_INC_DIR "/u/css/smithbd6/Thesis/benchmark/include")
+    set(BENCHMARK_LIB_DIR "/u/css/smithbd6/Thesis/build/src")
 endif(WIN32)
 
 include_directories(${BENCHMARK_INC_DIR})
+include_directories(../src/cds/stack)
+include_directories(../src/cds/queue)
+include_directories(../application)
+
 link_directories(${BENCHMARK_LIB_DIR})
 
-list(APPEND LINK_LIBS benchmark stack queue)
+list(APPEND LINK_LIBS benchmark)
 
-add_executable(cd_benchmarks ${BM_SRC})   
+add_executable(cd_benchmarks ${BM_SRC})
 target_link_libraries(cd_benchmarks ${LINK_LIBS})
 target_include_directories(cd_benchmarks PUBLIC ${BENCHMARK_INC_DIR})

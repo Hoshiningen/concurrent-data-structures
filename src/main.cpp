@@ -22,7 +22,7 @@ void consumeS(stack::StackBase<float>* stack)
 void produceQ(queue::QueueBase<float>* queue, const float& n)
 {
     for (auto i = -5; i <= n; ++i)
-        queue->enqueue(i * .7);
+        queue->enqueue(i * 1.0f);
 }
 
 void consumeQ(queue::QueueBase<float>* queue)
@@ -34,7 +34,7 @@ void consumeQ(queue::QueueBase<float>* queue)
 
 int main()
 {
-    auto stack = new stack::LockedStack<float>{};
+    auto stack = new stack::LockFreeStack<float>{};
 
     auto t1 = std::thread{ produceS, stack, 10 };
     auto t3 = std::thread{ consumeS, stack };
@@ -44,7 +44,7 @@ int main()
 
     std::cout << "\n\n";
 
-    auto queue = new queue::LockedQueue<float>{};
+    auto queue = new queue::LockFreeQueue<float>{};
 
     auto t4 = std::thread{ produceQ, queue, 10 };
     auto t6 = std::thread{ consumeQ, queue };
