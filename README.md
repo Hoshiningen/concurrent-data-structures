@@ -6,7 +6,7 @@ This is a set of concurrent data structures whose purpose is to explore the perf
 
 ## Building
 
-Make sure you have `git` and at least `Cmake 3.9.2` installed on your system.
+Make sure you have `git` and at least `Cmake 2.8.11` installed on your system.
 
 To build the project, it's necessary to build it's dependencies first if they aren't present on your system. Execute the following in a directory you wish to build the dependencies in:
 
